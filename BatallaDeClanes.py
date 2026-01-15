@@ -8,6 +8,7 @@ import os
 #Encuentra la direccion de la carpeta de imagenes
 Base=os.path.dirname(__file__)
 imagenesRuta=os.path.join(Base,"imagenes")
+sonidosRuta=os.path.join(Base, "audios")
 
 pygame.init()
 
@@ -79,6 +80,14 @@ rutaEspada=os.path.join(Base,"espada.txt")
 rutaGigante=os.path.join(Base,"gigante.txt")
 
 rutaExcel=os.path.join(Base,"registroJuegos.xlsx")
+
+#Direcciones de los sonidos
+batalla = os.path.join(sonidosRuta,"batalla.ogg") 
+curacion = os.path.join(sonidosRuta,"curacion.ogg") 
+golpe = os.path.join(sonidosRuta,"golpe.ogg") 
+sonidoMenu = os.path.join(sonidosRuta,"menu.ogg") 
+seleccionPersonajes = os.path.join(sonidosRuta,"seleccionPersonajes.ogg") 
+
 
 #Archivos para funciones administrador
 nivelAdmin=None
@@ -255,6 +264,15 @@ textoIngresado=""
 contrasenia="eda1"
 sortear="Vida"
 estado="menu"
+
+cancionMenu = pygame.mixer.Sound(sonidoMenu)
+cancionSeleccion = pygame.mixer.Sound(seleccionPersonajes)
+cancionBatalla = pygame.mixer.Sound(batalla)
+canalCanciones = pygame.mixer.Channel(0)
+
+sonidoCuracion = pygame.mixer.Sound(curacion)
+sonidoGolpe = pygame.mixer.Sound(golpe)
+canalEfectos = pygame.mixer.Channel(1)
 
 #Cola de turnos
 cola=Deque()
@@ -586,7 +604,7 @@ def mejorarEnemigos(personajes,datosBase,archivo):
     admi=open(rutaAdmin, "r")
     lineas = admi.readlines()
     if len(lineas) >= 2:
-        escalado = lineas[1].strip()
+        escalado = lineas[0].strip()
     else:
         escalado="bajo"
 
@@ -1339,7 +1357,7 @@ def ataqueEvaluarAvidos1(colaTurnos):
     #Se abre el archivo de admin para verificar cual es la dificultad
     admi=open(rutaAdmin,"r")
     p=admi.readline()
-    dificultad=admi.readline()
+    dificultad=admi.readline().strip()
 
     turno=colaTurnos.remove_front()
     colaTurnos.add_front(turno)
@@ -1360,11 +1378,11 @@ def ataqueEvaluarAvidos1(colaTurnos):
     acciones=[]
 
     #Segun la dificultad seleccionada en admin
-    if dificultad=="Fácil":
+    if dificultad=="facil":
         #En facil se curan los enemigos que tienen menos del 40% de vida
         if vidaActual<0.4*vidaMaxima:
             acciones.append(("curar",vidaMaxima-vidaActual))
-    elif dificultad=="Difícil":
+    elif dificultad=="dificil":
         #En dificil se curan los enemigos que tienen menos del 70% de vida
         if vidaActual<0.7*vidaMaxima:
             acciones.append(("curar",vidaMaxima-vidaActual))
@@ -1809,6 +1827,7 @@ def particion(lista, inicio, fin):
 
 #Ciclo while donde se programan los botones y teclado, la interacción con el usuario
 ejecutando=True
+estado_anterior=None
 while ejecutando:
     #Caso base si se da click en el tache de la ventana para cerrar la aplicacion
     for event in pygame.event.get():
@@ -2103,6 +2122,7 @@ while ejecutando:
                             elegirAtaque=False
                             yaAtaco=False
                             estado="combate"
+                    canalEfectos.play(sonidoGolpe)
                     
                 elif curarVida.collidepoint(event.pos):
                     restar=cola.remove_front()
@@ -2119,6 +2139,7 @@ while ejecutando:
                     colaActualizada=False
                     elegirAtaque=False
                     yaAtaco=False
+                    canalEfectos.play(sonidoCuracion)
      
         #Botones para recorrer la cola del historial
         elif estado=="historial":
@@ -2238,7 +2259,7 @@ while ejecutando:
                     admi = open(rutaAdmin, "r")
                     lineas = admi.readlines()
                     admi.close()
-                    lineas[0] = dificultad
+                    lineas[1] = dificultad
                     admi = open(rutaAdmin, "w")
                     admi.writelines(lineas)
                     admi.close()
@@ -2248,7 +2269,7 @@ while ejecutando:
                     admi = open(rutaAdmin, "r")
                     lineas = admi.readlines()
                     admi.close()
-                    lineas[0] = dificultad
+                    lineas[1] = dificultad
                     admi = open(rutaAdmin, "w")
                     admi.writelines(lineas)
                     admi.close()
@@ -2290,6 +2311,18 @@ while ejecutando:
                     disminuirDatosBase(nivelAdmin)
                     datosPersonajes=obtenerDatos()
                     mostrarDatos(ventana, fuente1c, datosPersonajes, nivelAdmin)
+
+    if estado != estado_anterior and estado not in ("seleccionarPartida", "ingresarClan", "iniciarJuego", "historial", "creditos", "resultado", "contraseniaAdmin", "admin"):
+        canalCanciones.stop()
+
+        if estado == "menu":
+            canalCanciones.play(cancionMenu, loops=-1)
+        elif estado == "jugar":
+            canalCanciones.play(cancionSeleccion, loops=-1)
+        elif estado == "combate":
+            canalCanciones.play(cancionBatalla, loops=-1)
+
+        estado_anterior = estado
 
     #Switch case donde se va cambiando de pantalla y funciones segun lo seleccionado por el usuario
     if estado=="menu":
