@@ -274,10 +274,20 @@ sonidoCuracion = pygame.mixer.Sound(curacion)
 sonidoGolpe = pygame.mixer.Sound(golpe)
 canalEfectos = pygame.mixer.Channel(1)
 
+pausa = 0
+pausado = False
+
 #Cola de turnos
 cola=Deque()
 
 indice=0
+
+#Funcion para una correcta ejecucion de efectos
+def pausarParaSonido(miliSeg):
+    global pausa, pausado
+
+    pausado = True
+    pausa = pygame.time.get_ticks() + miliSeg
 
 #Función que se ejecuta cuando el administrador aumenta algun dato base
 def aumentarDatosBase(atributo):
@@ -1398,6 +1408,7 @@ def ataqueEvaluarAvidos1(colaTurnos):
     if accion=="curar":
         vidasEnemigos[indice]=min(vidaMaxima,vidaActual+20)
         mensaje="Acción: "+turno[1]["Nombre"]+" Rojo se curó"
+        canalEfectos.play(sonidoCuracion)
     else:
         #Si no se curan, se usa avidos para evaluar el mejor ataque
         objetivo=seleccionarMejorObjetivoAvidos2()
@@ -1406,6 +1417,8 @@ def ataqueEvaluarAvidos1(colaTurnos):
             vidasGuerreros[objetivo]-=turno[1]["Danio"]
             vidasGuerreros[objetivo]=max(0,vidasGuerreros[objetivo])
             mensaje="Acción: "+turno[1]["Nombre"]+" Rojo atacó a "+guerrerosElegidos[objetivo]["Nombre"]+" Azul"
+        
+        canalEfectos.play(sonidoGolpe)
 
     #Se actualiza la cola de turnos
     actualizarEstadoCombate()
@@ -1829,6 +1842,17 @@ def particion(lista, inicio, fin):
 ejecutando=True
 estado_anterior=None
 while ejecutando:
+    tiempoTranscurrido = pygame.time.get_ticks()
+
+    if pausado:
+        pygame.event.pump()
+
+        if tiempoTranscurrido >= pausa:
+            pausado = False
+        else:
+            pygame.display.flip()
+            continue
+    
     #Caso base si se da click en el tache de la ventana para cerrar la aplicacion
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   
@@ -2117,12 +2141,14 @@ while ejecutando:
                             accionGuerreros=fuente1d.render(accionA,True,colorTexto)
                             pygame.display.update() 
                             ventana.blit(accionGuerreros,(405,550))
-                            pygame.display.update()    
+                            pygame.display.update()
                             pygame.time.delay(1500)   
                             elegirAtaque=False
                             yaAtaco=False
                             estado="combate"
                     canalEfectos.play(sonidoGolpe)
+                    pygame.time.delay(1000)   
+                    pausarParaSonido(1500)
                     
                 elif curarVida.collidepoint(event.pos):
                     restar=cola.remove_front()
@@ -2140,6 +2166,8 @@ while ejecutando:
                     elegirAtaque=False
                     yaAtaco=False
                     canalEfectos.play(sonidoCuracion)
+                    pygame.time.delay(800)   
+                    pausarParaSonido(1500)
      
         #Botones para recorrer la cola del historial
         elif estado=="historial":
