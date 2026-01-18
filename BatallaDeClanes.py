@@ -86,8 +86,21 @@ batalla = os.path.join(sonidosRuta,"batalla.ogg")
 curacion = os.path.join(sonidosRuta,"curacion.ogg") 
 golpe = os.path.join(sonidosRuta,"golpe.ogg") 
 sonidoMenu = os.path.join(sonidosRuta,"menu.ogg") 
-seleccionPersonajes = os.path.join(sonidosRuta,"seleccionPersonajes.ogg") 
+seleccionPersonajes = os.path.join(sonidosRuta,"seleccionPersonajes.ogg")
+victoria = os.path.join(sonidosRuta,"victoria.ogg")
+derrota = os.path.join(sonidosRuta,"derrota.ogg")
+elegido = os.path.join(sonidosRuta,"sonidoElegido.ogg")
+instruccion = os.path.join(sonidosRuta,"instruccionGuerreros.ogg")
+vozEspadachin = os.path.join(sonidosRuta,"vozEspadachin.ogg")
+vozArquero = os.path.join(sonidosRuta,"vozArquero.ogg")
+vozGigante = os.path.join(sonidosRuta,"vozGigante.ogg")
+vozCaballero = os.path.join(sonidosRuta,"vozCaballero.ogg")
 
+#Se cargan los sonidos que se guardaran en diccionarios
+dialogoEspadachin = pygame.mixer.Sound(vozEspadachin)
+dialogoArquero = pygame.mixer.Sound(vozArquero)
+dialogoGigante = pygame.mixer.Sound(vozGigante)
+dialogoCaballero = pygame.mixer.Sound(vozCaballero)
 
 #Archivos para funciones administrador
 nivelAdmin=None
@@ -162,6 +175,8 @@ def crearDiccionarios():
     espadaBase["imagenes"]=imagenEspadaA
     espadaRBase["imagenes"]=imagenEspadaR
 
+    espadaBase["dialogo"]=dialogoEspadachin
+
     arcoBase={}
     arcoRBase={}
     datos=open(rutaArco,"r")
@@ -183,6 +198,8 @@ def crearDiccionarios():
     arcoBase["imagenes"]=imagenArqueroA
     arcoRBase["imagenes"]=imagenArqueroR
 
+    arcoBase["dialogo"]=dialogoArquero
+
     giganteBase={}
     giganteRBase={}
     datos=open(rutaGigante, "r")
@@ -203,6 +220,8 @@ def crearDiccionarios():
     giganteBase["imagenes"]=imagenGiganteA 
     giganteRBase["imagenes"]=imagenGiganteR
 
+    giganteBase["dialogo"]=dialogoGigante
+
     caballeroBase={}
     caballeroRBase={}
     datos=open(rutaCaballero,"r")
@@ -222,6 +241,8 @@ def crearDiccionarios():
     datos.close()
     caballeroBase["imagenes"]=imagenCaballeroA
     caballeroRBase["imagenes"]=imagenCaballeroR
+
+    caballeroBase["dialogo"]=dialogoCaballero
 
     espada=espadaBase.copy()
     arco=arcoBase.copy()
@@ -268,11 +289,17 @@ estado="menu"
 cancionMenu = pygame.mixer.Sound(sonidoMenu)
 cancionSeleccion = pygame.mixer.Sound(seleccionPersonajes)
 cancionBatalla = pygame.mixer.Sound(batalla)
+cancionVictoria = pygame.mixer.Sound(victoria)
+cancionDerrota = pygame.mixer.Sound(derrota)
 canalCanciones = pygame.mixer.Channel(0)
 
 sonidoCuracion = pygame.mixer.Sound(curacion)
 sonidoGolpe = pygame.mixer.Sound(golpe)
+sonidoElegido = pygame.mixer.Sound(elegido)
 canalEfectos = pygame.mixer.Channel(1)
+
+vozNarrador = pygame.mixer.Sound(instruccion)
+canalVoz = pygame.mixer.Channel(2)
 
 pausa = 0
 pausado = False
@@ -1840,7 +1867,7 @@ def particion(lista, inicio, fin):
 
 #Ciclo while donde se programan los botones y teclado, la interacción con el usuario
 ejecutando=True
-estado_anterior=None
+estadoAnterior=None
 while ejecutando:
     tiempoTranscurrido = pygame.time.get_ticks()
 
@@ -2014,7 +2041,12 @@ while ejecutando:
                             guerrerosElegidos.remove(guerrero)
                         else:
                             if len(guerrerosElegidos) < 3:
+                                canalEfectos.play(sonidoElegido)
                                 guerrerosElegidos.append(guerrero)
+                                pygame.time.delay(500)
+                                canalVoz.play(guerrero.get("dialogo"))
+                                pausarParaSonido(3000)
+
                             else:
                                 mensajeError2 = fuente2.render("Máximo de guerreros seleccionados", True, rojoIntenso)
                                 ventana.blit(mensajeError2, (170,215))
@@ -2108,6 +2140,9 @@ while ejecutando:
                             elegirAtaque=False
                             yaAtaco=False                           
                             estado="combate"
+                            canalEfectos.play(sonidoGolpe)
+                            pygame.time.delay(1000)   
+                            pausarParaSonido(1500)
                     if len(vidasEnemigos)>1:
                         if atacar2.collidepoint(event.pos):
                             restar=cola.remove_front()
@@ -2127,6 +2162,9 @@ while ejecutando:
                             elegirAtaque=False
                             yaAtaco=False
                             estado="combate"
+                            canalEfectos.play(sonidoGolpe)
+                            pygame.time.delay(1000)   
+                            pausarParaSonido(1500)
                     if len(vidasEnemigos)>2:
                         if atacar3.collidepoint(event.pos):
                             restar=cola.remove_front()
@@ -2146,9 +2184,9 @@ while ejecutando:
                             elegirAtaque=False
                             yaAtaco=False
                             estado="combate"
-                    canalEfectos.play(sonidoGolpe)
-                    pygame.time.delay(1000)   
-                    pausarParaSonido(1500)
+                            canalEfectos.play(sonidoGolpe)
+                            pygame.time.delay(1000)   
+                            pausarParaSonido(1500)
                     
                 elif curarVida.collidepoint(event.pos):
                     restar=cola.remove_front()
@@ -2340,17 +2378,26 @@ while ejecutando:
                     datosPersonajes=obtenerDatos()
                     mostrarDatos(ventana, fuente1c, datosPersonajes, nivelAdmin)
 
-    if estado != estado_anterior and estado not in ("seleccionarPartida", "ingresarClan", "iniciarJuego", "historial", "creditos", "resultado", "contraseniaAdmin", "admin"):
+    if estado != estadoAnterior and estado not in ("seleccionarPartida", "ingresarClan", "iniciarJuego", "historial", "creditos", "contraseniaAdmin", "admin"):
         canalCanciones.stop()
+        canalCanciones.set_volume(1)
 
         if estado == "menu":
             canalCanciones.play(cancionMenu, loops=-1)
         elif estado == "jugar":
+            canalCanciones.set_volume(0.8)
             canalCanciones.play(cancionSeleccion, loops=-1)
+            canalVoz.play(vozNarrador)
+            pausarParaSonido(2000)
         elif estado == "combate":
             canalCanciones.play(cancionBatalla, loops=-1)
+        elif estado == "resultado":
+            if resultado == "Victoria":
+                canalCanciones.play(cancionVictoria)
+            else:
+                canalCanciones.play(cancionDerrota)
 
-        estado_anterior = estado
+        estadoAnterior = estado
 
     #Switch case donde se va cambiando de pantalla y funciones segun lo seleccionado por el usuario
     if estado=="menu":
